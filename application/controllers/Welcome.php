@@ -22,4 +22,9 @@ class Welcome extends CI_Controller {
 	{
 		$this->load->view('welcome_message');
 	}
+	
+	public function redirect() {
+	    $this->load->helper('url');
+	    redirect(base_url());
+	}
 }

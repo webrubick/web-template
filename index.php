@@ -81,6 +81,7 @@ switch (ENVIRONMENT)
 		{
 			error_reporting(E_ALL & ~E_NOTICE & ~E_STRICT & ~E_USER_NOTICE);
 		}
+		ini_set('max_execution_time', '0');
 	break;
 
 	default:
