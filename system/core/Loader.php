@@ -1422,4 +1422,152 @@ class CI_Loader {
 		}
 	}
 
+
+
+
+
+
+
+
+    // 自定义apis
+	protected $_ci_apis = array(); 
+	// 自定义方法
+	public function api($library, $object_name = NULL) {
+		if (!class_exists('API')) {
+			include_once APPPATH.'apis/API.php';
+		}
+
+		if (empty($library))
+		{
+			return $this;
+		}
+		elseif (is_array($library))
+		{
+			foreach ($library as $key => $value)
+			{
+				if (is_int($key))
+				{
+					$this->api($value);
+				}
+				else
+				{
+					$this->api($key, $value);
+				}
+			}
+
+			return $this;
+		}
+
+		$this->_ci_load_api($library, $object_name);
+		return $this;
+	}
+
+	/**
+	 * Internal CI api Loader
+	 *
+	 * @used-by	CI_Loader::api()
+	 * @uses	CI_Loader::_ci_init_api()
+	 *
+	 * @param	string	$class		Class name to load
+	 * @param	mixed	$params		Optional parameters to pass to the class constructor
+	 * @param	string	$object_name	Optional object name to assign to
+	 * @return	void
+	 */
+	protected function _ci_load_api($class, $object_name = NULL)
+	{
+		// Get the class name, and while we're at it trim any slashes.
+		// The directory path can be included as part of the class name,
+		// but we don't want a leading slash
+		$class = str_replace('.php', '', trim($class, '/'));
+
+		// Was the path included with the class name?
+		// We look for a slash to determine this
+		if (($last_slash = strrpos($class, '/')) !== FALSE)
+		{
+			// Extract the path
+			$subdir = substr($class, 0, ++$last_slash);
+
+			// Get the filename from the path
+			$class = substr($class, $last_slash);
+		}
+		else
+		{
+			$subdir = '';
+		}
+
+		$class = ucfirst($class);
+
+		// Safety: Was the class already loaded by a previous call?
+		if (class_exists($class, FALSE))
+		{
+			// Before we deem this to be a duplicate request, let's see
+			// if a custom object name is being supplied. If so, we'll
+			// return a new instance of the object
+			if ($object_name !== NULL)
+			{
+				$CI =& get_instance();
+				if ( ! isset($CI->$object_name))
+				{
+					$this->_ci_init_api($class, $object_name);
+					return ;
+				}
+			}
+
+			log_message('debug', $class.' class already loaded. Second attempt ignored.');
+			return;
+		}
+
+		$filepath = APPPATH.'apis/'.$subdir.$class.'.php';
+		if (file_exists($filepath)) {
+			include_once($filepath);
+			$this->_ci_init_api($class, $object_name);
+			return;
+		}
+
+		// If we got this far we were unable to find the requested class.
+		log_message('error', 'Unable to load the requested api class: '.$class);
+		show_error('Unable to load the requested api class: '.$class);
+	}
+
+	// 前提是加载了类
+	protected function _ci_init_api($class_name, $object_name = NULL) {
+		// Is the class name valid?
+		if ( ! class_exists($class_name, FALSE))
+		{
+			log_message('error', 'Non-existent api class: '.$class_name);
+			show_error('Non-existent api class: '.$class_name);
+		}
+
+		// Set the variable name we will assign the class to
+		// Was a custom class name supplied? If so we'll use it
+		if (empty($object_name))
+		{
+			$object_name = strtolower($class_name);
+			if (isset($this->_ci_varmap[$object_name]))
+			{
+				$object_name = $this->_ci_varmap[$object_name];
+			}
+		}
+
+		// Don't overwrite existing properties
+		$CI =& get_instance();
+		if (isset($CI->$object_name))
+		{
+			if ($CI->$object_name instanceof $class_name)
+			{
+				log_message('debug', $class_name." has already been instantiated as '".$object_name."'. Second attempt aborted.");
+				return;
+			}
+
+			show_error("Resource '".$object_name."' already exists and is not a ".$class_name." instance.");
+		}
+
+		// Save the class name and object name
+		$this->_ci_classes[$object_name] = $class_name;
+
+		// Instantiate the class
+		$CI->$object_name = new $class_name();
+	}
+
+
 }
