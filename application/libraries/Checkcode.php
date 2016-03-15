@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class checkcode  
+class Checkcode  
 {  
     var $width='60';  
     var $num='4';  
